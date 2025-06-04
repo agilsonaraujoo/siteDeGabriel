@@ -2,47 +2,503 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Detalhes do Produto</title>
     <link rel="stylesheet" href="style/style.css">
+    <link rel="stylesheet" href="style/responsive.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <header>
-        <h1>Detalhes do Produto</h1>
+        <div class="container">
+            <h1>Detalhes do Produto</h1>
+            <nav>
+                <a href="index.html" class="btn btn-secondary" style="margin-right: 10px;">Início</a>
+                <span class="usuario-info"></span>
+                <a href="login.html" class="btn btn-login" style="display: none;">Entrar</a>
+                <a href="cadastro.html" class="btn btn-secondary btn-cadastro" style="display: none;">Criar Conta</a>
+                <a href="#" class="btn btn-logout" style="display: none;">Sair</a>
+            </nav>
+        </div>
     </header>
-    <main id="produto-detalhe">
-        <!-- As informações do produto serão carregadas aqui via JavaScript -->
+    <main class="container">
+        <div id="produto-detalhe" class="produto-container">
+            <!-- As informações do produto serão carregadas aqui via JavaScript -->
+        </div>
     </main>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const produtoId = urlParams.get('id');
+        // Função para buscar todos os produtos
+        async function buscarProdutos() {
+            try {
+                // Primeiro tenta buscar do localStorage
+                const produtosSalvos = localStorage.getItem('produtos');
+                if (produtosSalvos) {
+                    return JSON.parse(produtosSalvos);
+                }
+                
+                // Se não encontrar no localStorage, tenta buscar do arquivo JSON
+                const response = await fetch('produtos.json');
+                if (!response.ok) {
+                    throw new Error('Não foi possível carregar os produtos');
+                }
+                const data = await response.json();
+                // Acessa a propriedade 'produtos' do objeto retornado
+                return data.produtos || [];
+            } catch (error) {
+                console.error('Erro ao buscar produtos:', error);
+                return [];
+            }
+        }
 
-        if (produtoId) {
-            fetch(`http://localhost:3000/produtos/${produtoId}`)
-                .then(res => {
-                    if (!res.ok) {
-                        throw new Error("Produto não encontrado");
-                    }
-                    return res.json();
-                })
-                .then(produto => {
-                    document.getElementById('produto-detalhe').innerHTML = `
-                        <div class="produto-detalhe-card">
-                            <img src="${produto.imagem}" alt="${produto.nome}" style="max-width: 300px; max-height: 300px;">
-                            <h2>${produto.nome}</h2>
-                            <p><strong>Preço:</strong> R$ ${produto.preco.toFixed(2)}</p>
-                            <p><strong>Descrição:</strong> ${produto.descricao}</p>
+        // Função para exibir os detalhes do produto
+        async function exibirDetalhesProduto() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const produtoId = parseInt(urlParams.get('id'));
+            const container = document.getElementById('produto-detalhe');
+
+            if (isNaN(produtoId)) {
+                container.innerHTML = '<p>ID do produto inválido.</p>';
+                return;
+            }
+
+            try {
+                const produtos = await buscarProdutos();
+                console.log('Produtos carregados:', produtos);
+                
+                // Converter o ID para string para garantir a comparação correta
+                const produto = produtos.find(p => parseInt(p.id) === produtoId);
+                console.log('Produto encontrado:', produto);
+
+                if (produto) {
+                    // Função auxiliar para obter a imagem correta
+                    const obterImagemProduto = () => {
+                        try {
+                            console.log('Buscando imagem para o produto:', produto.nome);
+                            
+                            // Primeiro, tenta usar a imagem específica do jogo
+                            const nomeMinusculo = produto.nome.toLowerCase();
+                            
+                            // Mapeamento de jogos para suas imagens específicas
+                            if (nomeMinusculo.includes('cyberpunk')) return 'img/cyberpunk-2077.png';
+                            if (nomeMinusculo.includes('god of war')) return 'img/god-of-war.png';
+                            if (nomeMinusculo.includes('gta') || nomeMinusculo.includes('grand theft auto')) return 'img/gta-v.png';
+                            if (nomeMinusculo.includes('last of us')) return 'img/last-of-us.png';
+                            if (nomeMinusculo.includes('simpsons')) return 'img/simpsons.png';
+                            if (nomeMinusculo.includes('spider') || nomeMinusculo.includes('aranha') || nomeMinusculo.includes('homem-aranha')) 
+                                return 'img/spider-man.png';
+                            
+                            // Se tiver uma imagem definida no produto
+                            if (produto.imagem) {
+                                const imgPath = produto.imagem.startsWith('img/') ? produto.imagem : `img/${produto.imagem}`;
+                                console.log('Usando imagem do produto:', imgPath);
+                                return imgPath;
+                            }
+                            
+                            console.log('Nenhuma imagem específica encontrada, usando imagem padrão');
+                            return 'img/sem-imagem.jpg';
+                            
+                        } catch (erro) {
+                            console.error('Erro ao carregar imagem:', erro);
+                            return 'img/sem-imagem.jpg';
+                        }
+                    };
+
+                    const imagemSrc = obterImagemProduto();
+                    
+                    // Criar elementos manualmente
+                    const imagemContainer = document.createElement('div');
+                    imagemContainer.className = 'imagem-container';
+                    
+                    console.log('Caminho da imagem a ser carregada:', imagemSrc);
+                    
+                    const imagem = document.createElement('img');
+                    imagem.alt = produto.nome;
+                    
+                    // Configura o evento de erro
+                    imagem.onerror = function() {
+                        console.error('Erro ao carregar a imagem:', this.src);
+                        this.onerror = null;
+                        this.src = 'img/sem-imagem.jpg';
+                    };
+                    
+                    // Configura o evento de load
+                    imagem.onload = function() {
+                        console.log('Imagem carregada com sucesso:', this.src);
+                    };
+                    
+                    // Define o src por último para disparar os eventos
+                    imagem.src = imagemSrc;
+                    
+                    const produtoInfo = document.createElement('div');
+                    produtoInfo.className = 'produto-info';
+                    
+                    const titulo = document.createElement('h2');
+                    titulo.textContent = produto.nome;
+                    
+                    const preco = document.createElement('p');
+                    preco.className = 'preco';
+                    preco.textContent = 'R$ ' + parseFloat(produto.preco).toFixed(2).replace('.', ',');
+                    
+                    const genero = document.createElement('p');
+                    genero.innerHTML = '<strong>Gênero:</strong> ' + (produto.genero || 'Não especificado');
+                    
+                    const plataforma = document.createElement('p');
+                    plataforma.innerHTML = '<strong>Plataforma:</strong> ' + (produto.plataforma || 'Não especificada');
+                    
+                    const ano = document.createElement('p');
+                    ano.innerHTML = '<strong>Ano:</strong> ' + (produto.ano || 'Não especificado');
+                    
+                    const descricaoContainer = document.createElement('div');
+                    descricaoContainer.className = 'descricao';
+                    descricaoContainer.innerHTML = '<strong>Descrição:</strong>';
+                    
+                    const descricao = document.createElement('p');
+                    descricao.textContent = produto.descricao || 'Sem descrição disponível.';
+                    
+                    const voltarBtn = document.createElement('a');
+                    voltarBtn.href = 'index.html';
+                    voltarBtn.className = 'btn';
+                    voltarBtn.textContent = 'Voltar para a loja';
+                    
+                    // Montar a estrutura
+                    imagemContainer.appendChild(imagem);
+                    
+                    descricaoContainer.appendChild(descricao);
+                    
+                    produtoInfo.appendChild(titulo);
+                    produtoInfo.appendChild(preco);
+                    produtoInfo.appendChild(genero);
+                    produtoInfo.appendChild(plataforma);
+                    produtoInfo.appendChild(ano);
+                    produtoInfo.appendChild(descricaoContainer);
+                    produtoInfo.appendChild(voltarBtn);
+                    
+                    // Limpar o container e adicionar os elementos
+                    container.innerHTML = '';
+                    container.appendChild(imagemContainer);
+                    container.appendChild(produtoInfo);
+                } else {
+                    container.innerHTML = `
+                        <div class="produto-nao-encontrado">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <h2>Produto não encontrado</h2>
+                            <p>O produto que você está procurando não foi encontrado em nosso catálogo.</p>
+                            <a href="index.html" class="btn btn-primary">Voltar para a loja</a>
                         </div>
                     `;
-                })
-                .catch(erro => {
-                    console.error(erro);
-                    document.getElementById('produto-detalhe').innerHTML = '<p>Produto não encontrado.</p>';
-                });
-        } else {
-            document.getElementById('produto-detalhe').innerHTML = '<p>Produto não especificado.</p>';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar detalhes do produto:', error);
+                container.innerHTML = `
+                    <div class="erro-carregamento">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h2>Erro ao carregar o produto</h2>
+                        <p>Ocorreu um erro ao carregar as informações do produto. Por favor, tente novamente mais tarde.</p>
+                        <a href="index.html" class="btn btn-primary">Voltar para a loja</a>
+                    </div>
+                `;
+            }
         }
+
+        // Inicializa a exibição dos detalhes quando a página carregar
+        document.addEventListener('DOMContentLoaded', exibirDetalhesProduto);
     </script>
+    <style>
+        /* Reset de estilos para evitar conflitos */
+        :root {
+            --cor-primaria: #4a90e2;
+            --cor-secundaria: #f39c12;
+            --cor-texto: #e0e0e0;
+            --cor-texto-secundario: #b0b0b0;
+            --cor-fundo: #121212;
+            --cor-card: #1e1e1e;
+            --cor-card-hover: #252525;
+            --cor-borda: #333;
+            --cor-perigo: #e74c3c;
+            --cor-aviso: #f39c12;
+            --cor-sucesso: #2ecc71;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto);
+            line-height: 1.6;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        header {
+            background-color: var(--cor-card);
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 100;
+            margin-bottom: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        main {
+            flex: 1;
+            padding: 0 1rem 2rem;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .produto-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            justify-content: center;
+            padding: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .imagem-container {
+            flex: 0 0 400px;
+            max-width: 100%;
+            height: 400px;
+            overflow: hidden;
+            border-radius: 8px;
+            background: #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .imagem-container img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .produto-info {
+            flex: 1;
+            min-width: 300px;
+            max-width: 600px;
+            padding: 1rem;
+        }
+        
+        .produto-info h2 {
+            color: var(--cor-primaria);
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        
+        .preco {
+            display: inline-block;
+            font-size: 2rem;
+            color: var(--cor-secundaria);
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            background: rgba(243, 156, 18, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+        }
+        
+        .produto-info p {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .produto-info p strong {
+            color: var(--cor-texto);
+            font-weight: 600;
+        }
+        
+        .descricao {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--cor-primaria);
+        }
+        
+        .descricao p {
+            margin-top: 0.5rem;
+            color: var(--cor-texto-secundario);
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: var(--cor-primaria);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .btn:hover {
+            background: #357abd;
+            transform: translateY(-2px);
+        }
+
+
+        .produto-info h2 {
+            color: var(--cor-primaria);
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+        }
+
+        .preco {
+            font-size: 1.8rem;
+            color: var(--cor-secundaria);
+            font-weight: bold;
+            margin: 1.5rem 0;
+        }
+
+        .descricao {
+            margin: 1.5rem 0;
+            line-height: 1.7;
+            background: #2a2a2a;
+            padding: 1.2rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--cor-primaria);
+        }
+
+        .descricao p {
+            margin: 0.8rem 0 0 0;
+            color: var(--cor-texto-secundario);
+        }
+        .descricao strong {
+            color: var(--cor-texto);
+        }
+
+        .produto-nao-encontrado,
+        .erro-carregamento {
+            text-align: center;
+            padding: 3rem 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            color: var(--cor-texto);
+        }
+
+        .produto-nao-encontrado i,
+        .erro-carregamento i {
+            font-size: 4rem;
+            color: var(--cor-perigo);
+            margin-bottom: 1rem;
+        }
+
+        .erro-carregamento i {
+            color: var(--cor-aviso);
+        }
+
+        /* Barra de rolagem personalizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+
+        @media (max-width: 768px) {
+            .produto-container {
+                padding: 0.5rem;
+                gap: 1rem;
+            }
+            
+            .imagem-container {
+                height: 300px;
+                flex: 0 0 100%;
+            }
+            
+            .produto-info {
+                padding: 0.5rem;
+            }
+
+            .produto-info {
+                width: 100%;
+                padding: 0;
+            }
+            
+            .preco {
+                font-size: 1.8rem;
+                margin: 1rem 0 1.5rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .produto-detalhe-card {
+                padding: 1rem;
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .imagem-container {
+                height: 250px;
+                margin-bottom: 1.5rem;
+            }
+            
+            .produto-info h2 {
+                font-size: 1.5rem;
+                margin-bottom: 1rem;
+            }
+            
+            .preco {
+                font-size: 1.5rem;
+                margin: 0.5rem 0 1.5rem;
+                padding: 0.5rem 1rem;
+            }
+            
+            .descricao {
+                margin: 1.5rem 0;
+                padding: 1rem;
+            }
+            
+            .btn {
+                width: 100%;
+                text-align: center;
+                padding: 0.8rem;
+            }
+        }
+    </style>
 </body>
 </html>
